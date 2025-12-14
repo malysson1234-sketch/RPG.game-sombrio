@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>RPG Sombrio Infinito</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#000000">
+
+<link rel="manifest" href="manifest.json">
+
+<style>
+html,body{margin:0;padding:0;overflow:hidden;background:#000}
+canvas{display:block;background:#111}
+
+#attack {
+  position:fixed;
+  right:20px;
+  bottom:40px;
+  width:80px;
+  height:80px;
+  border-radius:50%;
+  background:#8b0000;
+  border:none;
+}
+#stick {
+  position:fixed;
+  left:20px;
+  bottom:40px;
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  background:#222;
+}
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+<div id="stick"></div>
+<button id="attack"></button>
+
+<script>
+// SERVICE WORKER
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+
+// CANVAS
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+function resize(){
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize", resize);
+
+// PLAYER
+const player = {x:0,y:0,w:24,h:24,speed:2,atk:false};
+const camera = {x:0,y:0};
+let enemies = [];
+let move={x:0,y:0};
+
+// INPUT
+attack.addEventListener("touchstart",()=>player.atk=true);
+attack.addEventListener("touchend",()=>player.atk=false);
+
+stick.addEventListener("touchmove",e=>{
+  const r = stick.getBoundingClientRect();
+  const t = e.touches[0];
+  move.x = ((t.clientX-r.left)/r.width-0.5)*2;
+  move.y = ((t.clientY-r.top)/r.height-0.5)*2;
+});
+stick.addEventListener("touchend",()=>move={x:0,y:0});
+
+// ENEMIES
+setInterval(()=>{
+  enemies.push({
+    x:player.x+Math.random()*600-300,
+    y:player.y+Math.random()*400-200,
+    w:20,h:20,hp:30+Math.abs(player.x)/500*10
+  });
+},2000);
+
+// LOOP
+function loop(){
+  player.x+=move.x*player.speed;
+  player.y+=move.y*player.speed;
+
+  camera.x=player.x-canvas.width/2;
+  camera.y=player.y-canvas.height/2;
+
+  enemies.forEach(e=>{
+    const dx=player.x-e.x, dy=player.y-e.y;
+    const d=Math.hypot(dx,dy);
+    if(d<200){ e.x+=dx/d*0.5; e.y+=dy/d*0.5; }
+    if(d<30 && player.atk) e.hp-=2;
+  });
+  enemies=enemies.filter(e=>e.hp>0);
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  for(let i=-10;i<20;i++){
+    for(let j=-10;j<20;j++){
+      ctx.fillStyle="#1b1b1b";
+      ctx.fillRect(i*64-camera.x%64,j*64-camera.y%64,64,64);
+    }
+  }
+
+  ctx.fillStyle="#550000";
+  ctx.fillRect(player.x-camera.x,player.y-camera.y,24,24);
+
+  ctx.fillStyle="#003300";
+  enemies.forEach(e=>{
+    ctx.fillRect(e.x-camera.x,e.y-camera.y,20,20);
+  });
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
